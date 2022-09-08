@@ -1,11 +1,16 @@
 from flask import Blueprint, render_template, request, flash
+from .db_man import Arena_DB_Manager
 
 # Blueprints specifies that this files contains url routes
 auth = Blueprint('auth', __name__)
 
+# Initialise a database manager object
+db_path = 'website/databases/arena.db'
+dbm = Arena_DB_Manager(db_path)
+dbm.init_arena_db()
+
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
-    data = request.form # 'data' contains the data that was sent as part of the form 
     return render_template("login.html")
 
 @auth.route('/logout')
@@ -32,8 +37,12 @@ def sign_up():
             flash('Password must be at least 7 characters long!.', category='error')
 
         else:
-            flash('Account created!', category='success')
-        
+            flash('Account successfully created!', category='success')
+
+            # Package data, allow the db manager to add it to the database
+            user_data = (username, email, password1)
+            dbm.add_user_credentials(user_data)
+
     return render_template("signup.html")
 
 
