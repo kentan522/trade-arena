@@ -1,0 +1,15 @@
+#bottom-container {
+    position: absolute;
+    bottom: 0;
+    border-top: 2px solid black;
+    padding-top: 10px;
+    padding-bottom: 20px;
+    background-color: rgb(241, 239, 237);
+}
+
+#cheds-quote {
+    display: flex;
+    border: 3px solid black;
+    align-items: center;
+    justify-content: center;
+}
