@@ -1,4 +1,5 @@
 import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # This file will contain database related functions - processing, parsing etc.
 
@@ -84,11 +85,70 @@ class Arena_DB_Manager(DB_Manager):
     # Adds user credentials to arena.db
     def add_user_credentials(self, user_data):
         self.connect_db()
-        sql_string = 'INSERT INTO users (username, email, pwd) VALUES (?, ?, ?)'
-        self.exec(sql_string, user_data)
+        user_data[2] = generate_password_hash(user_data[2], method='sha256') # Hash the password
+
+        insert_user_str = 'INSERT INTO users (username, email, pwd) VALUES (?, ?, ?);'
+        self.exec(insert_user_str, user_data)
         
         self.commit()
         self.close()
+
+    def check_login_credentials(self, login_data):
+        self.connect_db()
+        username = login_data[0]
+        password = login_data[1]
+        obtain_user_str = "SELECT username FROM users WHERE username = (?);"
+
+        # Return false if username does not exist in the db
+        if len(self.exec(obtain_user_str, (username, ))) == 0:
+            return False
+
+        else:
+            
+            # Obtain the hashed password using the login's username
+            obtain_pwd_str = "SELECT pwd FROM users WHERE username = (?);"
+            hashed_pwd = self.exec(obtain_pwd_str, (username,))[0][0] # Since queries are returned as [(hashedpwd, )]
+
+            # Return false if password doesn't match
+            if not check_password_hash(hashed_pwd, password):
+                return False
+            
+            # Otherwise return True
+            return True
+    
+    def check_exists_credentials(self, username, email):
+        self.connect_db()
+
+        # Should support caching in the future instead of querying the whole user table 
+        # Probably save check_register_dict as an attribute of the dbmanager?
+        # Probably can just check through each values within the nested loop below and return to exit the loop when the same username is encountered? 
+            # That was I don't have to store everything in a dict
+        obtain_user_str = 'SELECT username, email FROM users'
+        user_data = self.exec(obtain_user_str)
+        columns = [description[0] for description in self.cursor.description] # Obtain columns from output of last SQL command
+
+        # Create a dictionary containing all usernames and emails from the database
+        check_register_dict = {}
+        for i in range(len(columns)):
+            check_register_dict[columns[i]] = []
+            for data in user_data:
+                check_register_dict[columns[i]].append(data[i])
+        
+        username_exists = username in check_register_dict[columns[0]]
+        email_exists = email in check_register_dict[columns[1]]
+
+        if username_exists or email_exists:
+            return True
+
+        return False
+
+
+
+
+        
+
+
+        
 
 if __name__ == '__main__':
     # create_user_db()

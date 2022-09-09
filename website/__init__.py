@@ -1,4 +1,4 @@
-from flask import Flask, g 
+from flask import Flask, g
 from .db_man import Arena_DB_Manager
 import sys
 
@@ -28,6 +28,7 @@ def create_app():
     
     if sys.argv[-1] == 'reset':
         # If the CL arg 'reset' is passed, the databases will be reset
+        # WATCH OUT: if debug mode is on, any changes will call 'reset' on the command line too, causing databases to be reset
         dbm.init_arena_db(reset=True)
 
     else:
