@@ -1,5 +1,7 @@
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
+import requests
+import json
 
 # This file will contain database related functions - processing, parsing etc.
 
@@ -93,6 +95,7 @@ class Arena_DB_Manager(DB_Manager):
         self.commit()
         self.close()
 
+    # Check for allowing user login
     def check_login_credentials(self, login_data):
         self.connect_db()
         username = login_data[0]
@@ -109,6 +112,9 @@ class Arena_DB_Manager(DB_Manager):
             obtain_pwd_str = "SELECT pwd FROM users WHERE username = (?);"
             hashed_pwd = self.exec(obtain_pwd_str, (username,))[0][0] # Since queries are returned as [(hashedpwd, )]
 
+
+            self.close()
+
             # Return false if password doesn't match
             if not check_password_hash(hashed_pwd, password):
                 return False
@@ -116,6 +122,7 @@ class Arena_DB_Manager(DB_Manager):
             # Otherwise return True
             return True
     
+    # Check for preventing registration of existing username or email
     def check_exists_credentials(self, username, email):
         self.connect_db()
 
@@ -125,9 +132,12 @@ class Arena_DB_Manager(DB_Manager):
             # That was I don't have to store everything in a dict
         obtain_user_str = 'SELECT username, email FROM users'
         user_data = self.exec(obtain_user_str)
+
+        self.close()
         columns = [description[0] for description in self.cursor.description] # Obtain columns from output of last SQL command
 
         # Create a dictionary containing all usernames and emails from the database
+        # Maybe change this to an internal function?
         check_register_dict = {}
         for i in range(len(columns)):
             check_register_dict[columns[i]] = []
@@ -142,15 +152,95 @@ class Arena_DB_Manager(DB_Manager):
 
         return False
 
+    # Calls API to get coin data, for adding coin to user's watchlist
+    def add_coin_data(self, username, coin_name):
 
+        data = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin_name}&vs_currencies=usd").json()
 
+        if data:
+            # Obtain coin name - this is still called instead of using the passed in 'coin_name' because the passed in 'coin_name' may have weird casing combinations
+            coin_name = list(data.keys())[0]
 
+            self.connect_db()
+
+            # Obtain user id based on username of current logged in user
+            obtain_id_str = 'SELECT id FROM users WHERE username=(?)'
+            user_id = self.exec(obtain_id_str, (username,))[0][0]
+
+            # Obtain coin_ids in the user's watchlist
+            obtain_coin_str = 'SELECT coin_id FROM user_watchlist WHERE user_id=(?)'
+            coin_ids = self.exec(obtain_coin_str, (user_id, ))
+            
+            # If there are coins in the user's watchlist
+            if len(coin_ids) != 0:
+
+                # Only limit 10 coins in the watchlist (FOR NOW)
+                if len(coin_ids) > 10:
+                    return False
+
+                # Obtain the list of tuples coin_ids = [(coin_name,)...]
+                coin_ids = self.exec(obtain_coin_str, (user_id, ))
+
+                # Convert the list of tuples to a list of coin names
+                coin_names = []
+                for i in range(len(coin_ids)):
+                    coin_names.append(coin_ids[i][0])
+
+                # Check if coin is already in the watchlist
+                if coin_name in coin_names:
+                    # Coin is already in the watchlist!
+                    # Use a json file to handle this maybe? And use json files to handle all message flashes [FUTURE REFACTORING]
+                    return False
+
+            # Otherwise, add coin to watchlist of user id 
+            add_watchlist_str = 'INSERT INTO user_watchlist (user_id, coin_id) VALUES (?, ?);'
+            self.exec(add_watchlist_str, (user_id, coin_name))
+
+            print('Coin added to watchlist!')
+            
+            self.commit()
+            self.close()
+
+            return True
+
+        else:
+            # No coin was found
+            return False
+
+    def get_coin_watchlist_data(self, username):
+        self.connect_db()
+
+        # Obtain user id based on username of current logged in user
+        obtain_id_str = 'SELECT id FROM users WHERE username=(?)'
+        user_id = self.exec(obtain_id_str, (username,))[0][0]
+
+        # Obtain the list of tuples coin_ids = [(coin_name,)...]
+        obtain_coin_str = 'SELECT coin_id FROM user_watchlist WHERE user_id=(?)'
+        coin_ids = self.exec(obtain_coin_str, (user_id, ))
+
+        # If there are coins in the user's watchlist - this is for loading the watch list initially but when the watchlist is empty
+        if len(coin_ids) == 0:
+            return [], []
+
+        # Convert the list of tuples to a list of coin names
+        coin_names = []
+        for i in range(len(coin_ids)):
+            coin_names.append(coin_ids[i][0])
+
+        # THIS IS VERY SLOW SINCE IT MAKES MULTIPLE API CALLS, INSTEAD CALL ONCE TO GET ALL PRICES
+        # Update coin price data for each coin
+        coin_prices = []
+        for coin in coin_names:
+            data = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd").json()
+            
+            coin_prices.append(list(data[coin].values())[0])
         
+        print('Coin price data updated!')
+        self.close()
+        return coin_names, coin_prices
 
 
-        
 
 if __name__ == '__main__':
-    # create_user_db()
-    db_man = DB_Manager()
-    db_man.init_arena_db()
+    # Testing
+    pass

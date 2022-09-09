@@ -4,5 +4,42 @@
 {% endblock %}
 
 {% block content %}
-    <p>User Homepage.</p> 
+    <h3>Welcome, {{ username }}! </h3>
+    <p> Here is your personal watchlist! For now, coins can only be viewed in USD pairs.</p>
+    <div>
+        <!-- Form for adding coins to the watchlist -->
+        <nav class="navbar navbar-light bg-light">
+            <form class="form-inline" method="POST">
+              <input 
+                class="form-control" 
+                type="text"   
+                id="coin_name" 
+                name="coin_name" 
+                placeholder="Bitcoin"
+                >       
+              <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Add to watchlist</button>
+            </form>
+          </nav>
+    </div>
+    <div>
+        <!-- Table for watchlist -->
+        <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Coin Name</th>
+                <th scope="col">Price (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+                {% for i in range(0, col_length) %}
+                    <tr>
+                        <th scope="row">{{ i+1 }}</th>
+                        <td>{{ coin_names[i] }}</td>
+                        <td>{{ coin_prices[i] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+          </table>
+    </div>
 {% endblock %} 

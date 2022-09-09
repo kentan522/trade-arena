@@ -25,7 +25,6 @@ def create_app():
     db_path = 'website/databases/arena.db'
     dbm = Arena_DB_Manager(db_path)
 
-    
     if sys.argv[-1] == 'reset':
         # If the CL arg 'reset' is passed, the databases will be reset
         # WATCH OUT: if debug mode is on, any changes will call 'reset' on the command line too, causing databases to be reset

@@ -17,7 +17,7 @@ def login():
         login_successful = dbm.check_login_credentials((username, password))
 
         if login_successful:
-            flash('Login successful! Welcome to your homepage', category='success')
+            flash('Login successful! Welcome to your homepage.', category='success')
 
             # Store the login in a session
             session['name'] = username
